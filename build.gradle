@@ -1,0 +1,68 @@
+
+plugins {
+    id 'org.springframework.boot' version '2.7.0'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+    id 'org.openapi.generator' version '7.1.0'
+}
+
+group = 'com.adapter'
+version = 'unspecified'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springdoc:springdoc-openapi-ui:1.6.14'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.0'
+    implementation 'org.hibernate.validator:hibernate-validator:6.2.0.Final'
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.0.0'
+    implementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0' 
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.0' 
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+}
+
+def specDir = '/Users/shishir/Desktop/cb-provider-spi/../cb-provider-spi/spec/spi'
+def specs = ['openapi_location_validation.yml', 'openapi_tax.yml', 'openapi_trn.yml']
+
+specs.each { spec ->
+    def taskName = "generate${spec.replace('.yml', '').capitalize()}"
+    tasks.register(taskName, org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+        generatorName = 'spring'
+        inputSpec = "$specDir/$spec"
+        outputDir = "$projectDir/src/main/java"
+        apiPackage = "com.adapter.api.${spec.replace('.yml', '').replace('_', '')}"
+        modelPackage = "com.adapter.model.${spec.replace('.yml', '').replace('_', '')}"
+        configOptions = [
+            dateLibrary: 'java8',
+            interfaceOnly: 'true',
+            useSpringBoot3: 'true',
+            groupBy: 'tags',
+            generateApiUtil: 'true'
+        ]
+    }
+}
+
+tasks.named('openApiGenerate').configure {
+    enabled = false
+}
+
+tasks.register('openApiGenerateFullProject') {
+    dependsOn tasks.withType(org.openapitools.generator.gradle.plugin.tasks.GenerateTask)
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "src/main/java"
+        }
+    }
+}
+
+compileJava.dependsOn tasks.openApiGenerateFullProject
